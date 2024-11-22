@@ -3,6 +3,7 @@ package Fachada;
 import Config.DatabaseConfig;
 import Dominio.Funcionalidad;
 import Dominio.Perfil;
+import Config.PostgresException;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -16,7 +17,7 @@ public class PerfilFachada {
     }
 
     // RF002-01 - Ingreso de Perfil
-    public void crearPerfil(String nombrePerfil, String estado, String descripcion) {
+    public void crearPerfil(String nombrePerfil, String estado, String descripcion) throws PostgresException {
         String sql = "INSERT INTO Perfil (nombre_perfil, estado, descripcion) VALUES (?, ?, ?)";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -27,12 +28,12 @@ public class PerfilFachada {
             statement.executeUpdate();
             System.out.println("Perfil creado exitosamente.");
         } catch (SQLException e) {
-            System.err.println("Error al crear el perfil: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 
     // RF002-02 - Listado de Perfiles
-    public List<Perfil> listarPerfiles() {
+    public List<Perfil> listarPerfiles() throws PostgresException {
         String sql = "SELECT * FROM Perfil";
         List<Perfil> perfiles = new ArrayList<>();
 
@@ -53,14 +54,14 @@ public class PerfilFachada {
                 perfiles.add(perfil);
             }
         } catch (SQLException e) {
-            System.err.println("Error al listar los perfiles: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
 
         return perfiles;
     }
 
     // RF002-03 - Modificación de Perfil
-    public void modificarPerfil(int idPerfil, String nombrePerfil, String estado, String descripcion) {
+    public void modificarPerfil(int idPerfil, String nombrePerfil, String estado, String descripcion) throws PostgresException {
         String sql = "UPDATE Perfil SET nombre_perfil = ?, estado = ?, descripcion = ? WHERE id_perfil = ?";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -76,12 +77,12 @@ public class PerfilFachada {
                 System.out.println("Perfil no encontrado.");
             }
         } catch (SQLException e) {
-            System.err.println("Error al modificar el perfil: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 
     // RF002-04 - Baja de Perfil
-    public void eliminarPerfil(int idPerfil) {
+    public void eliminarPerfil(int idPerfil) throws PostgresException {
         String sql = "DELETE FROM Perfil WHERE id_perfil = ?";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -94,12 +95,12 @@ public class PerfilFachada {
                 System.out.println("Perfil no encontrado.");
             }
         } catch (SQLException e) {
-            System.err.println("Error al eliminar el perfil: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 
     // Asociar funcionalidades a un perfil
-    public void asociarFuncionalidadAPerfil(int idPerfil, int idFuncionalidad) {
+    public void asociarFuncionalidadAPerfil(int idPerfil, int idFuncionalidad) throws PostgresException {
         String sql = "INSERT INTO PerfilFuncionalidad (id_perfil, id_funcionalidad) VALUES (?, ?)";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -109,12 +110,12 @@ public class PerfilFachada {
             statement.executeUpdate();
             System.out.println("Funcionalidad asociada exitosamente al perfil.");
         } catch (SQLException e) {
-            System.err.println("Error al asociar la funcionalidad al perfil: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 
     // Eliminar asociación de funcionalidad con un perfil
-    public void eliminarFuncionalidadDePerfil(int idPerfil, int idFuncionalidad) {
+    public void eliminarFuncionalidadDePerfil(int idPerfil, int idFuncionalidad) throws PostgresException {
         String sql = "DELETE FROM PerfilFuncionalidad WHERE id_perfil = ? AND id_funcionalidad = ?";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -128,12 +129,12 @@ public class PerfilFachada {
                 System.out.println("No se encontró la funcionalidad asociada al perfil.");
             }
         } catch (SQLException e) {
-            System.err.println("Error al eliminar la funcionalidad del perfil: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 
     // Obtener funcionalidades asociadas a un perfil
-    private List<Funcionalidad> obtenerFuncionalidadesDePerfil(int idPerfil) {
+    private List<Funcionalidad> obtenerFuncionalidadesDePerfil(int idPerfil) throws PostgresException {
         String sql = "SELECT f.id_funcionalidad, f.nombre_funcionalidad, f.descripcion_funcionalidad " +
                 "FROM Funcionalidad f " +
                 "INNER JOIN PerfilFuncionalidad pf ON f.id_funcionalidad = pf.id_funcionalidad " +
@@ -154,7 +155,7 @@ public class PerfilFachada {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error al obtener las funcionalidades del perfil: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
 
         return funcionalidades;

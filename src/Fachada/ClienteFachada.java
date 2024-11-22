@@ -3,6 +3,7 @@ package Fachada;
 import Config.DatabaseConfig;
 import Dominio.Cliente;
 import Dominio.Perfil;
+import Config.PostgresException;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -15,13 +16,11 @@ public class ClienteFachada {
         this.connection = DatabaseConfig.getInstance().getConnection();
     }
 
-    // RF001-01 - Registro de Cliente con Perfil
     public void crearCliente(int id, String nombres, String apellidos, String tipoDocumento, String numeroDocumento,
                              String domicilio, String correo, String contrasena, String estado, int nroSocio,
-                             int totalAnualCuotas, int pagoCuotas, boolean dificultadAuditiva, boolean lenguajeSenas, int idPerfil) {
+                             int totalAnualCuotas, int pagoCuotas, boolean dificultadAuditiva, boolean lenguajeSenas, int idPerfil) throws PostgresException {
         if (!tipoDocumento.equalsIgnoreCase("CEDULA") && !tipoDocumento.equalsIgnoreCase("PASAPORTE")) {
-            System.out.println("El tipo de documento debe ser 'CEDULA' o 'PASAPORTE'.");
-            return;
+            throw new PostgresException("23514", "El tipo de documento debe ser 'CEDULA' o 'PASAPORTE'.");
         }
 
         String sqlUsuario = "INSERT INTO Usuario (id_usuario, nombres, apellidos, tipo_documento, numero_documento, " +
@@ -35,7 +34,6 @@ public class ClienteFachada {
             try (PreparedStatement statementUsuario = connection.prepareStatement(sqlUsuario);
                  PreparedStatement statementCliente = connection.prepareStatement(sqlCliente)) {
 
-                // Insertar en Usuario
                 statementUsuario.setInt(1, id);
                 statementUsuario.setString(2, nombres);
                 statementUsuario.setString(3, apellidos);
@@ -48,7 +46,6 @@ public class ClienteFachada {
                 statementUsuario.setInt(10, idPerfil);
                 statementUsuario.executeUpdate();
 
-                // Insertar en Cliente
                 statementCliente.setInt(1, id);
                 statementCliente.setInt(2, nroSocio);
                 statementCliente.setInt(3, totalAnualCuotas);
@@ -61,23 +58,23 @@ public class ClienteFachada {
             connection.commit();
             System.out.println("Cliente creado exitosamente.");
         } catch (SQLException e) {
-            System.err.println("Error al crear el cliente: " + e.getMessage());
             try {
                 connection.rollback();
-            } catch (SQLException rollbackEx) {
-                System.err.println("Error al revertir la transacción: " + rollbackEx.getMessage());
+            } catch (SQLException ex) {
+                throw new PostgresException(e.getSQLState(), e.getMessage());
             }
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         } finally {
             try {
                 connection.setAutoCommit(true);
-            } catch (SQLException autoCommitEx) {
-                System.err.println("Error al restaurar el modo de autocommit: " + autoCommitEx.getMessage());
+            } catch (SQLException e) {
+                throw new PostgresException(e.getSQLState(), e.getMessage());
+
             }
         }
     }
 
-    // RF001-02 - Listado de Clientes
-    public void mostrarClientes() {
+    public void mostrarClientes() throws PostgresException {
         String sql = "SELECT u.id_usuario, u.nombres, u.apellidos, u.tipo_documento, u.numero_documento, " +
                 "u.correo, u.domicilio, u.estado, c.nro_asociado, c.total_anual_cuotas, c.pago_cuotas, " +
                 "c.dificultad_auditiva, c.maneja_lenguaje_senas, p.nombre_perfil " +
@@ -113,16 +110,13 @@ public class ClienteFachada {
             }
 
         } catch (SQLException e) {
-            System.err.println("Error al obtener los clientes: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 
-
-    // Método para buscar un cliente por su ID
-// Método para buscar un cliente por su ID
-    public Cliente buscarCliente(int id) {
+    public Cliente buscarCliente(int id) throws PostgresException {
         String sql = "SELECT u.id_usuario, u.nombres, u.apellidos, u.tipo_documento, u.numero_documento, " +
-                "u.correo, u.contrasena, u.domicilio, u.nro_puerta, u.apto, u.estado, u.id_perfil, " +
+                "u.correo, u.contrasena, u.domicilio, u.estado, u.id_perfil, " +
                 "p.nombre_perfil, c.nro_asociado, c.total_anual_cuotas, c.pago_cuotas, " +
                 "c.dificultad_auditiva, c.maneja_lenguaje_senas " +
                 "FROM Usuario u " +
@@ -144,40 +138,27 @@ public class ClienteFachada {
                             resultSet.getString("correo"),
                             resultSet.getString("contrasena"),
                             resultSet.getString("domicilio"),
-                            resultSet.getString("nro_puerta"),
-                            resultSet.getString("apto"),
-                            resultSet.getString("estado"),
+                            null, null, resultSet.getString("estado"),
                             resultSet.getObject("id_perfil") != null ?
-                                    new Perfil(
-                                            resultSet.getInt("id_perfil"),
-                                            resultSet.getString("nombre_perfil"),
-                                            null, // Estado no necesario aquí
-                                            null  // Descripción no necesaria aquí
-                                    ) : null,
-                            resultSet.getInt("nro_asociado"),
-                            resultSet.getInt("total_anual_cuotas"),
-                            resultSet.getInt("pago_cuotas"),
-                            resultSet.getBoolean("maneja_lenguaje_senas"),
+                                    new Perfil(resultSet.getInt("id_perfil"), resultSet.getString("nombre_perfil"), null, null)
+                                    : null,
+                            resultSet.getInt("nro_asociado"), resultSet.getInt("total_anual_cuotas"),
+                            resultSet.getInt("pago_cuotas"), resultSet.getBoolean("maneja_lenguaje_senas"),
                             resultSet.getBoolean("dificultad_auditiva")
                     );
                 } else {
-                    System.out.println("No se encontró ningún cliente con el ID proporcionado.");
                     return null;
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error al buscar el cliente: " + e.getMessage());
-            return null;
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 
-
-    // RF001-03 - Modificación de Cliente
     public void modificarCliente(int id, String nombres, String apellidos, String domicilio, String estado,
-                                 int totalAnualCuotas, int pagoCuotas, boolean dificultadAuditiva, boolean lenguajeSenas, int idPerfil) {
+                                 int totalAnualCuotas, int pagoCuotas, boolean dificultadAuditiva, boolean lenguajeSenas, int idPerfil) throws PostgresException {
         String sqlUsuario = "UPDATE Usuario SET nombres = ?, apellidos = ?, domicilio = ?, estado = ?, id_perfil = ? WHERE id_usuario = ?";
-        String sqlCliente = "UPDATE Cliente SET total_anual_cuotas = ?, pago_cuotas = ?, " +
-                "dificultad_auditiva = ?, maneja_lenguaje_senas = ? WHERE id_usuario = ?";
+        String sqlCliente = "UPDATE Cliente SET total_anual_cuotas = ?, pago_cuotas = ?, dificultad_auditiva = ?, maneja_lenguaje_senas = ? WHERE id_usuario = ?";
 
         try {
             connection.setAutoCommit(false);
@@ -185,7 +166,6 @@ public class ClienteFachada {
             try (PreparedStatement statementUsuario = connection.prepareStatement(sqlUsuario);
                  PreparedStatement statementCliente = connection.prepareStatement(sqlCliente)) {
 
-                // Actualizar en Usuario
                 statementUsuario.setString(1, nombres);
                 statementUsuario.setString(2, apellidos);
                 statementUsuario.setString(3, domicilio);
@@ -194,7 +174,6 @@ public class ClienteFachada {
                 statementUsuario.setInt(6, id);
                 statementUsuario.executeUpdate();
 
-                // Actualizar en Cliente
                 statementCliente.setInt(1, totalAnualCuotas);
                 statementCliente.setInt(2, pagoCuotas);
                 statementCliente.setBoolean(3, dificultadAuditiva);
@@ -206,23 +185,24 @@ public class ClienteFachada {
             connection.commit();
             System.out.println("Cliente actualizado exitosamente.");
         } catch (SQLException e) {
-            System.err.println("Error al actualizar el cliente: " + e.getMessage());
             try {
                 connection.rollback();
-            } catch (SQLException rollbackEx) {
-                System.err.println("Error al revertir la transacción: " + rollbackEx.getMessage());
+            } catch (SQLException ex) {
+                throw new PostgresException(e.getSQLState(), e.getMessage());
+
             }
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         } finally {
             try {
                 connection.setAutoCommit(true);
-            } catch (SQLException autoCommitEx) {
-                System.err.println("Error al restaurar el modo de autocommit: " + autoCommitEx.getMessage());
+            } catch (SQLException e) {
+                throw new PostgresException(e.getSQLState(), e.getMessage());
+
             }
         }
     }
 
-    // RF001-04 - Baja de Cliente
-    public void eliminarCliente(int id) {
+    public void eliminarCliente(int id) throws PostgresException {
         String sqlCliente = "DELETE FROM Cliente WHERE id_usuario = ?";
         String sqlUsuario = "DELETE FROM Usuario WHERE id_usuario = ?";
 
@@ -232,11 +212,9 @@ public class ClienteFachada {
             try (PreparedStatement statementCliente = connection.prepareStatement(sqlCliente);
                  PreparedStatement statementUsuario = connection.prepareStatement(sqlUsuario)) {
 
-                // Eliminar de Cliente
                 statementCliente.setInt(1, id);
                 statementCliente.executeUpdate();
 
-                // Eliminar de Usuario
                 statementUsuario.setInt(1, id);
                 statementUsuario.executeUpdate();
             }
@@ -244,23 +222,24 @@ public class ClienteFachada {
             connection.commit();
             System.out.println("Cliente eliminado exitosamente.");
         } catch (SQLException e) {
-            System.err.println("Error al eliminar el cliente: " + e.getMessage());
             try {
                 connection.rollback();
-            } catch (SQLException rollbackEx) {
-                System.err.println("Error al revertir la transacción: " + rollbackEx.getMessage());
+            } catch (SQLException ex) {
+                throw new PostgresException(e.getSQLState(), e.getMessage());
+
             }
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         } finally {
             try {
                 connection.setAutoCommit(true);
-            } catch (SQLException autoCommitEx) {
-                System.err.println("Error al restaurar el modo de autocommit: " + autoCommitEx.getMessage());
+            } catch (SQLException e) {
+                throw new PostgresException(e.getSQLState(), e.getMessage());
+
             }
         }
     }
 
-    // RF001-05 - Login de Cliente
-    public boolean loginUsuario(String correo, String contrasena) {
+    public boolean loginUsuario(String correo, String contrasena) throws PostgresException {
         String sql = "SELECT u.id_usuario FROM Usuario u " +
                 "INNER JOIN Cliente c ON u.id_usuario = c.id_usuario " +
                 "WHERE u.correo = ? AND u.contrasena = ?";
@@ -270,16 +249,10 @@ public class ClienteFachada {
             statement.setString(2, contrasena);
 
             try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    System.out.println("Login exitoso para el Cliente: " + correo);
-                    return true;
-                } else {
-                    return false;
-                }
+                return resultSet.next();
             }
         } catch (SQLException e) {
-            System.err.println("Error en el login: " + e.getMessage());
-            return false;
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 }

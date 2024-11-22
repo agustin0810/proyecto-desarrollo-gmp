@@ -3,6 +3,7 @@ package Fachada;
 import Config.DatabaseConfig;
 import Dominio.Cliente;
 import Dominio.Cuota;
+import Config.PostgresException;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -16,7 +17,7 @@ public class PagoFachada {
     }
 
     // RF007-01 - Ingreso de Pagos
-    public void registrarPago(Cuota cuota) {
+    public void registrarPago(Cuota cuota) throws PostgresException {
         String sql = "INSERT INTO Cuota (id_cuota, numero_cuota, fecha_cuota, valor_cuota, id_cliente) " +
                 "VALUES (?, ?, ?, ?, ?)";
 
@@ -30,12 +31,12 @@ public class PagoFachada {
             statement.executeUpdate();
             System.out.println("Pago registrado exitosamente.");
         } catch (SQLException e) {
-            System.err.println("Error al registrar el pago: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 
     // RF007-02 - Modificación de Pagos
-    public void modificarPago(int idCuota, double nuevoValor, Date nuevaFecha) {
+    public void modificarPago(int idCuota, double nuevoValor, Date nuevaFecha) throws PostgresException {
         String sql = "UPDATE Cuota SET valor_cuota = ?, fecha_cuota = ? WHERE id_cuota = ?";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -50,12 +51,12 @@ public class PagoFachada {
                 System.out.println("No se encontró el pago con el ID especificado.");
             }
         } catch (SQLException e) {
-            System.err.println("Error al modificar el pago: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 
     // Listar pagos de un cliente (opcional para facilitar consultas)
-    public List<Cuota> listarPagosPorCliente(int idCliente) {
+    public List<Cuota> listarPagosPorCliente(int idCliente) throws PostgresException {
         String sql = "SELECT id_cuota, numero_cuota, fecha_cuota, valor_cuota FROM Cuota WHERE id_cliente = ?";
         List<Cuota> pagos = new ArrayList<>();
 
@@ -74,7 +75,7 @@ public class PagoFachada {
                 pagos.add(cuota);
             }
         } catch (SQLException e) {
-            System.err.println("Error al listar los pagos: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
 
         return pagos;
