@@ -1,6 +1,7 @@
 package Fachada;
 
 import Config.DatabaseConfig;
+import Config.PostgresException;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -15,10 +16,9 @@ public class AdministradorFachada {
 
     // RF001-01 - Registro de Administrador
     public void crearAdministrador(int id, String nombres, String apellidos, String tipoDocumento, String numeroDocumento,
-                                   String domicilio, String correo, String contrasena, String estado) {
+                                   String domicilio, String correo, String contrasena, String estado) throws PostgresException {
         if (!tipoDocumento.equalsIgnoreCase("Cédula") && !tipoDocumento.equalsIgnoreCase("Pasaporte")) {
-            System.out.println("El tipo de documento debe ser 'Cédula' o 'Pasaporte'.");
-            return;
+            throw new PostgresException("23514", "El tipo de documento debe ser 'Cédula' o 'Pasaporte'.");
         }
 
         String sqlUsuario = "INSERT INTO Usuario (id_usuario, nombres, apellidos, tipo_documento, numero_documento, " +
@@ -31,7 +31,6 @@ public class AdministradorFachada {
             try (PreparedStatement statementUsuario = connection.prepareStatement(sqlUsuario);
                  PreparedStatement statementAdministrador = connection.prepareStatement(sqlAdministrador)) {
 
-                // Insertar en Usuario
                 statementUsuario.setInt(1, id);
                 statementUsuario.setString(2, nombres);
                 statementUsuario.setString(3, apellidos);
@@ -43,7 +42,6 @@ public class AdministradorFachada {
                 statementUsuario.setString(9, estado);
                 statementUsuario.executeUpdate();
 
-                // Insertar en Administrador
                 statementAdministrador.setInt(1, id);
                 statementAdministrador.executeUpdate();
             }
@@ -51,23 +49,23 @@ public class AdministradorFachada {
             connection.commit();
             System.out.println("Administrador creado exitosamente.");
         } catch (SQLException e) {
-            System.err.println("Error al crear el administrador: " + e.getMessage());
             try {
                 connection.rollback();
-            } catch (SQLException rollbackEx) {
-                System.err.println("Error al revertir la transacción: " + rollbackEx.getMessage());
+            } catch (SQLException ex) {
+                throw new PostgresException(e.getSQLState(), e.getMessage());
             }
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         } finally {
             try {
                 connection.setAutoCommit(true);
-            } catch (SQLException autoCommitEx) {
-                System.err.println("Error al restaurar el modo de autocommit: " + autoCommitEx.getMessage());
+            } catch (SQLException e) {
+                throw new PostgresException(e.getSQLState(), e.getMessage());
             }
         }
     }
 
     // RF001-02 - Listado de Administradores
-    public void mostrarAdministradores() {
+    public void mostrarAdministradores() throws PostgresException {
         String sql = "SELECT u.id_usuario, u.nombres, u.apellidos, u.tipo_documento, u.numero_documento, " +
                 "u.correo, u.domicilio, u.estado FROM Usuario u " +
                 "INNER JOIN Administrador a ON u.id_usuario = a.id_usuario";
@@ -94,12 +92,12 @@ public class AdministradorFachada {
             }
 
         } catch (SQLException e) {
-            System.err.println("Error al obtener los administradores: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 
     // RF001-03 - Modificación de Administrador
-    public void modificarAdministrador(int id, String nombres, String apellidos, String domicilio, String estado) {
+    public void modificarAdministrador(int id, String nombres, String apellidos, String domicilio, String estado) throws PostgresException {
         String sql = "UPDATE Usuario SET nombres = ?, apellidos = ?, domicilio = ?, estado = ? WHERE id_usuario = ?";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -115,14 +113,13 @@ public class AdministradorFachada {
             } else {
                 System.out.println("Administrador no encontrado.");
             }
-
         } catch (SQLException e) {
-            System.err.println("Error al actualizar el administrador: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 
     // RF001-04 - Baja de Administrador
-    public void eliminarAdministrador(int id) {
+    public void eliminarAdministrador(int id) throws PostgresException {
         String sqlAdministrador = "DELETE FROM Administrador WHERE id_usuario = ?";
         String sqlUsuario = "DELETE FROM Usuario WHERE id_usuario = ?";
 
@@ -132,11 +129,9 @@ public class AdministradorFachada {
             try (PreparedStatement statementAdministrador = connection.prepareStatement(sqlAdministrador);
                  PreparedStatement statementUsuario = connection.prepareStatement(sqlUsuario)) {
 
-                // Eliminar de Administrador
                 statementAdministrador.setInt(1, id);
                 statementAdministrador.executeUpdate();
 
-                // Eliminar de Usuario
                 statementUsuario.setInt(1, id);
                 statementUsuario.executeUpdate();
             }
@@ -144,23 +139,24 @@ public class AdministradorFachada {
             connection.commit();
             System.out.println("Administrador eliminado exitosamente.");
         } catch (SQLException e) {
-            System.err.println("Error al eliminar el administrador: " + e.getMessage());
             try {
                 connection.rollback();
-            } catch (SQLException rollbackEx) {
-                System.err.println("Error al revertir la transacción: " + rollbackEx.getMessage());
+            } catch (SQLException ex) {
+                throw new PostgresException(e.getSQLState(), e.getMessage());
             }
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         } finally {
             try {
                 connection.setAutoCommit(true);
-            } catch (SQLException autoCommitEx) {
-                System.err.println("Error al restaurar el modo de autocommit: " + autoCommitEx.getMessage());
+            } catch (SQLException e) {
+                throw new PostgresException(e.getSQLState(), e.getMessage());
+
             }
         }
     }
 
     // RF001-05 - Login de Administrador
-    public boolean loginUsuario(String correo, String contrasena) {
+    public boolean loginUsuario(String correo, String contrasena) throws PostgresException {
         String sql = "SELECT u.id_usuario FROM Usuario u " +
                 "INNER JOIN Administrador a ON u.id_usuario = a.id_usuario " +
                 "WHERE u.correo = ? AND u.contrasena = ?";
@@ -178,8 +174,7 @@ public class AdministradorFachada {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error en el login: " + e.getMessage());
-            return false;
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 }

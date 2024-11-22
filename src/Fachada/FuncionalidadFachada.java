@@ -2,6 +2,7 @@ package Fachada;
 
 import Config.DatabaseConfig;
 import Dominio.Funcionalidad;
+import Config.PostgresException;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -15,7 +16,7 @@ public class FuncionalidadFachada {
     }
 
     // RF003-01 - Ingreso de Funcionalidad
-    public void crearFuncionalidad(String nombreFuncionalidad, String descripcionFuncionalidad) {
+    public void crearFuncionalidad(String nombreFuncionalidad, String descripcionFuncionalidad) throws PostgresException {
         String sql = "INSERT INTO Funcionalidad (nombre_funcionalidad, descripcion_funcionalidad) VALUES (?, ?)";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -25,12 +26,12 @@ public class FuncionalidadFachada {
             statement.executeUpdate();
             System.out.println("Funcionalidad creada exitosamente.");
         } catch (SQLException e) {
-            System.err.println("Error al crear la funcionalidad: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 
     // RF003-02 - Listado de Funcionalidades
-    public List<Funcionalidad> listarFuncionalidades() {
+    public List<Funcionalidad> listarFuncionalidades() throws PostgresException {
         String sql = "SELECT * FROM Funcionalidad";
         List<Funcionalidad> funcionalidades = new ArrayList<>();
 
@@ -45,16 +46,15 @@ public class FuncionalidadFachada {
                 );
                 funcionalidades.add(funcionalidad);
             }
-
         } catch (SQLException e) {
-            System.err.println("Error al listar las funcionalidades: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
 
         return funcionalidades;
     }
 
     // RF003-03 - Modificación de Funcionalidad
-    public void modificarFuncionalidad(int idFuncionalidad, String nombreFuncionalidad, String descripcionFuncionalidad) {
+    public void modificarFuncionalidad(int idFuncionalidad, String nombreFuncionalidad, String descripcionFuncionalidad) throws PostgresException {
         String sql = "UPDATE Funcionalidad SET nombre_funcionalidad = ?, descripcion_funcionalidad = ? WHERE id_funcionalidad = ?";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -69,12 +69,12 @@ public class FuncionalidadFachada {
                 System.out.println("Funcionalidad no encontrada.");
             }
         } catch (SQLException e) {
-            System.err.println("Error al modificar la funcionalidad: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 
     // RF003-04 - Baja de Funcionalidad
-    public void eliminarFuncionalidad(int idFuncionalidad) {
+    public void eliminarFuncionalidad(int idFuncionalidad) throws PostgresException {
         String sql = "DELETE FROM Funcionalidad WHERE id_funcionalidad = ?";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -87,7 +87,7 @@ public class FuncionalidadFachada {
                 System.out.println("Funcionalidad no encontrada.");
             }
         } catch (SQLException e) {
-            System.err.println("Error al eliminar la funcionalidad: " + e.getMessage());
+            throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
 }
