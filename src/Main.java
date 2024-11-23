@@ -182,10 +182,10 @@ public class Main {
                 return;
             }
 
-            System.out.print("Ingrese Tipo de Documento (Cédula/Pasaporte): ");
+            System.out.print("Ingrese Tipo de Documento (CEDULA/PASAPORTE): ");
             String tipoDocumento = scanner.nextLine().trim();
-            if (!tipoDocumento.equalsIgnoreCase("Cédula") && !tipoDocumento.equalsIgnoreCase("Pasaporte")) {
-                System.out.println("El tipo de documento debe ser 'Cédula' o 'Pasaporte'.");
+            if (!tipoDocumento.equalsIgnoreCase("CEDULA") && !tipoDocumento.equalsIgnoreCase("PASAPORTE")) {
+                System.out.println("El tipo de documento debe ser 'CEDULA' o 'PASAPORTE'.");
                 return;
             }
 
@@ -216,10 +216,10 @@ public class Main {
             System.out.print("Ingrese Domicilio: ");
             String domicilio = scanner.nextLine().trim();
 
-            System.out.print("Ingrese Estado (Activo/Inactivo): ");
+            System.out.print("Ingrese Estado (activo/inactivo): ");
             String estado = scanner.nextLine().trim();
-            if (!estado.equalsIgnoreCase("Activo") && !estado.equalsIgnoreCase("Inactivo")) {
-                System.out.println("El estado debe ser 'Activo' o 'Inactivo'.");
+            if (!estado.equals("activo") && !estado.equalsIgnoreCase("inactivo")) {
+                System.out.println("El estado debe ser 'activo' o 'inactivo'.");
                 return;
             }
 

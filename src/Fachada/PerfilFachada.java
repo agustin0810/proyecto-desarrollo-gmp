@@ -16,6 +16,7 @@ public class PerfilFachada {
         this.connection = DatabaseConfig.getInstance().getConnection();
     }
 
+
     // RF002-01 - Ingreso de Perfil
     public void crearPerfil(String nombrePerfil, String estado, String descripcion) throws PostgresException {
         String sql = "INSERT INTO Perfil (nombre_perfil, estado, descripcion) VALUES (?, ?, ?)";
