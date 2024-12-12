@@ -14,12 +14,13 @@ public class Main {
     private static FuncionalidadFachada funcionalidadFachada = new FuncionalidadFachada();
     private static PerfilFachada perfilFachada = new PerfilFachada();
     private static PagoFachada pagoFachada = new PagoFachada();
-    public static void main(String[] args) {
+    public static void main(String[] args) throws PostgresException {
 
         Scanner scanner = new Scanner(System.in);
         boolean isLoggedIn = false;
         boolean isAdmin = false; // true = administrador, false = cliente
         int opcion;
+        int idUsuario =-1;
 
         // Login único para administradores y clientes
         while (!isLoggedIn) {
@@ -31,11 +32,12 @@ public class Main {
             // Intentar login como administrador
             try {
                 isLoggedIn = administradorFachada.loginUsuario(correo, contrasena);
+                idUsuario=administradorFachada.idDeEmail(correo);
             } catch (PostgresException e) {
                 System.out.println(e.getMessage());
             }
             if (isLoggedIn) {
-                System.out.println("¡Bienvenido, Administrador!");
+                System.out.println("¡Bienvenido, Administrador!" +idUsuario);
                 isAdmin = true;
                 break;
             }
@@ -43,11 +45,12 @@ public class Main {
             // Intentar login como cliente
             try {
                 isLoggedIn = clienteFachada.loginUsuario(correo, contrasena);
+                idUsuario=clienteFachada.idDeEmail(correo);
             } catch (PostgresException e) {
                 System.out.println(e.getMessage());
             }
             if (isLoggedIn) {
-                System.out.println("¡Bienvenido, Cliente!");
+                System.out.println("¡Bienvenido, Cliente!" +idUsuario);
                 isAdmin = false;
             }
 
@@ -105,7 +108,7 @@ public class Main {
                     break;
                 case 5:
                     if (!isAdmin) {
-                        modificarDatosPropios(clienteFachada, scanner);
+                        modificarDatosPropios(clienteFachada, idUsuario, scanner);
                     } else {
                         System.out.println("Acceso denegado. Solo los clientes pueden modificar sus propios datos.");
                     }
@@ -182,10 +185,10 @@ public class Main {
                 return;
             }
 
-            System.out.print("Ingrese Tipo de Documento (Cédula/Pasaporte): ");
+            System.out.print("Ingrese Tipo de Documento (CEDULA/PASAPORTE): ");
             String tipoDocumento = scanner.nextLine().trim();
-            if (!tipoDocumento.equalsIgnoreCase("Cédula") && !tipoDocumento.equalsIgnoreCase("Pasaporte")) {
-                System.out.println("El tipo de documento debe ser 'Cédula' o 'Pasaporte'.");
+            if (!tipoDocumento.equalsIgnoreCase("CEDULA") && !tipoDocumento.equalsIgnoreCase("PASAPORTE")) {
+                System.out.println("El tipo de documento debe ser 'CEDULA' o 'PASAPORTE'.");
                 return;
             }
 
@@ -216,7 +219,7 @@ public class Main {
             System.out.print("Ingrese Domicilio: ");
             String domicilio = scanner.nextLine().trim();
 
-            System.out.print("Ingrese Estado (Activo/Inactivo): ");
+            System.out.print("Ingrese Estado (activo/inactivo): ");
             String estado = scanner.nextLine().trim();
             if (!estado.equalsIgnoreCase("Activo") && !estado.equalsIgnoreCase("Inactivo")) {
                 System.out.println("El estado debe ser 'Activo' o 'Inactivo'.");
@@ -477,8 +480,89 @@ public class Main {
         }
     }
 
-    private static void modificarDatosPropios(ClienteFachada clienteFachada, Scanner scanner) {
+    private static void modificarDatosPropios(ClienteFachada clienteFachada, int idUsuario, Scanner scanner) throws PostgresException {
         System.out.println("\n=== Modificar Datos Propios ===");
+        int id = idUsuario;
+        Cliente c = clienteFachada.buscarCliente(id);
+
+        // Solicitar los nuevos datos
+        System.out.print("Ingrese Nuevos Nombres (dejar en blanco para mantener): ");
+        String nombres = scanner.nextLine();
+        System.out.print("Ingrese Nuevos Apellidos (dejar en blanco para mantener): ");
+        String apellidos = scanner.nextLine();
+        System.out.print("Ingrese Nuevo Domicilio (dejar en blanco para mantener): ");
+        String domicilio = scanner.nextLine();
+        System.out.print("Ingrese Nuevo Estado (Activo/Inactivo): ");
+        String estado = scanner.nextLine();
+
+        // Validar el estado
+        if (!estado.equalsIgnoreCase("Activo") && !estado.equalsIgnoreCase("Inactivo")) {
+//            throw new IllegalArgumentException("El estado debe ser 'Activo' o 'Inactivo'.");
+            System.out.println("El estado debe ser 'Activo' o 'Inactivo'.");
+            return;
+        }
+
+        int totalAnualCuotas = 0;
+        try{
+
+            System.out.print("Ingrese Nuevo Total Anual Cuotas: ");
+            totalAnualCuotas = Integer.parseInt(scanner.nextLine());
+        }
+        catch(Exception e){
+            totalAnualCuotas=c.getTotalAnualCuotas();
+        }
+
+        int pagoCuotas = 0;
+        try{
+            System.out.print("Ingrese Nuevo Pago de Cuotas: ");
+            pagoCuotas = Integer.parseInt(scanner.nextLine());
+        }
+        catch(Exception e){
+            pagoCuotas=c.getPagoCuotas();
+        }
+        boolean dificultadAuditiva = c.isDificultadAuditiva();
+        try{
+
+            System.out.print("¿Tiene Dificultad Auditiva? (true/false): ");
+            dificultadAuditiva = Boolean.parseBoolean(scanner.nextLine());
+        }
+        catch(Exception e){
+        }
+        boolean lenguajeSenas = c.isLenguajeSenas();
+        try{
+            System.out.print("¿Maneja Lenguaje de Señas? (true/false): ");
+            lenguajeSenas = Boolean.parseBoolean(scanner.nextLine());
+
+        }
+        catch(Exception e){}
+
+        int idPerfil = 0;
+        try{
+            System.out.print("Ingrese Nuevo ID de Perfil: ");
+            idPerfil = Integer.parseInt(scanner.nextLine());
+        }
+        catch(Exception e){
+            idPerfil=c.getPerfil().getIdPerfil();
+        }
+
+        // Intentar la modificación
+        try {
+            clienteFachada.modificarCliente(
+                    id,
+                    nombres.isEmpty() ? c.getNombres() : nombres,
+                    apellidos.isEmpty() ? c.getApellidos() : apellidos,
+                    domicilio.isEmpty() ? c.getDomicilio() : domicilio,
+                    estado,
+                    totalAnualCuotas,
+                    pagoCuotas,
+                    dificultadAuditiva,
+                    lenguajeSenas,
+                    idPerfil
+            );
+            System.out.println("Cliente modificado exitosamente.");
+        } catch (PostgresException e) {
+            System.out.println("Error al modificar el cliente: " + e.getMessage());
+        }
     }
 
     private static boolean validarCorreo(String correo) {

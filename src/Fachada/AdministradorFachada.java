@@ -17,8 +17,8 @@ public class AdministradorFachada {
     // RF001-01 - Registro de Administrador
     public void crearAdministrador(int id, String nombres, String apellidos, String tipoDocumento, String numeroDocumento,
                                    String domicilio, String correo, String contrasena, String estado) throws PostgresException {
-        if (!tipoDocumento.equalsIgnoreCase("Cédula") && !tipoDocumento.equalsIgnoreCase("Pasaporte")) {
-            throw new PostgresException("23514", "El tipo de documento debe ser 'Cédula' o 'Pasaporte'.");
+        if (!tipoDocumento.equalsIgnoreCase("CEDULA") && !tipoDocumento.equalsIgnoreCase("PASAPORTE")) {
+            throw new PostgresException("23514", "El tipo de documento debe ser 'CEDULA' o 'PASAPORTE'.");
         }
 
         String sqlUsuario = "INSERT INTO Usuario (id_usuario, nombres, apellidos, tipo_documento, numero_documento, " +
@@ -177,4 +177,26 @@ public class AdministradorFachada {
             throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
+
+    public int idDeEmail(String correo) throws PostgresException {
+        String sql = "SELECT u.id_usuario FROM Usuario u " +
+                "INNER JOIN Administrador a ON u.id_usuario = a.id_usuario " +
+                "WHERE u.correo = ?";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, correo);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    System.out.println("Login exitoso para el Administrador: " + correo);
+                    return resultSet.getInt("id_usuario");
+                } else {
+                    return -1;
+                }
+            }
+        } catch (SQLException e) {
+            throw new PostgresException(e.getSQLState(), e.getMessage());
+        }
+    }
+
 }

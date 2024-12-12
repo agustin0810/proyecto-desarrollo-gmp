@@ -255,4 +255,25 @@ public class ClienteFachada {
             throw new PostgresException(e.getSQLState(), e.getMessage());
         }
     }
+
+    public int idDeEmail(String correo) throws PostgresException {
+        String sql = "SELECT u.id_usuario FROM Usuario u " +
+                "INNER JOIN Cliente c ON u.id_usuario = c.id_usuario " +
+                "WHERE u.correo = ?";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, correo);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    System.out.println("Login exitoso para el Administrador: " + correo);
+                    return resultSet.getInt("id_usuario");
+                } else {
+                    return -1;
+                }
+            }
+        } catch (SQLException e) {
+            throw new PostgresException(e.getSQLState(), e.getMessage());
+        }
+    }
 }
